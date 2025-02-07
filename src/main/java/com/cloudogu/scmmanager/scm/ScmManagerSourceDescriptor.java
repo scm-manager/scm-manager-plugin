@@ -1,7 +1,5 @@
 package com.cloudogu.scmmanager.scm;
 
-import static java.util.Collections.emptyList;
-
 import com.cloudogu.scmmanager.scm.api.IllegalReturnStatusException;
 import com.cloudogu.scmmanager.scm.api.Repository;
 import com.cloudogu.scmmanager.scm.api.ScmManagerApi;
@@ -11,15 +9,18 @@ import com.google.common.base.Strings;
 import hudson.util.ComboBoxModel;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Predicate;
 import jenkins.scm.api.SCMSourceDescriptor;
 import jenkins.scm.api.SCMSourceOwner;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
+
+import static java.util.Collections.emptyList;
 
 public class ScmManagerSourceDescriptor extends SCMSourceDescriptor {
 
@@ -58,18 +59,14 @@ public class ScmManagerSourceDescriptor extends SCMSourceDescriptor {
             @QueryParameter String serverUrl,
             @QueryParameter String credentialsId,
             @QueryParameter String value)
-            throws InterruptedException, ExecutionException {
+            throws InterruptedException {
         if (Strings.isNullOrEmpty(serverUrl) || Strings.isNullOrEmpty(credentialsId) || Strings.isNullOrEmpty(value)) {
             return FormValidation.ok();
         }
-        String[] namespaceNameParts = value.split("/");
-        if (namespaceNameParts.length < 2 || namespaceNameParts.length > 3) {
-            return FormValidation.error(
-                    "Please enter a valid repository in the form namespace/name or select one from the dropdown.");
-        }
+        RepositoryRepresentationUtil.RepositoryRepresentation repositoryRepresentation = RepositoryRepresentationUtil.parse(value);
         try {
             ScmManagerApi api = apiFactory.create(context, serverUrl, credentialsId);
-            api.getRepository(namespaceNameParts[0], namespaceNameParts[1]).get();
+            api.getRepository(repositoryRepresentation.namespace(), repositoryRepresentation.name()).get();
         } catch (ExecutionException e) {
             if (e.getCause() instanceof IllegalReturnStatusException
                     && ((IllegalReturnStatusException) e.getCause()).getStatusCode() == 404) {
@@ -129,7 +126,7 @@ public class ScmManagerSourceDescriptor extends SCMSourceDescriptor {
     }
 
     protected String createRepositoryOption(Repository repository) {
-        return String.format("%s/%s", repository.getNamespace(), repository.getName());
+        return RepositoryRepresentationUtil.format(repository);
     }
 
     static {

@@ -80,13 +80,13 @@ public class ScmManagerSource extends SCMSource {
         this.serverUrl = serverUrl;
         this.credentialsId = credentialsId;
 
-        String[] parts = repository.split("/");
-        this.namespace = parts[0];
-        this.name = parts[1];
+        RepositoryRepresentationUtil.RepositoryRepresentation repositoryRepresentation = RepositoryRepresentationUtil.parse(repository);
+        this.namespace = repositoryRepresentation.namespace();
+        this.name = repositoryRepresentation.name();
         this.apiFactory = apiFactory;
 
-        if (parts.length > 2) {
-            type = parts[2];
+        if (repositoryRepresentation.type() != null) {
+            type = repositoryRepresentation.type();
         } else {
             type = determineType();
         }
@@ -199,7 +199,7 @@ public class ScmManagerSource extends SCMSource {
     }
 
     public String getRepository() {
-        return String.format("%s/%s/%s", namespace, name, type);
+        return RepositoryRepresentationUtil.format(new RepositoryRepresentationUtil.RepositoryRepresentation(namespace, name, type));
     }
 
     public String getCredentialsId() {
@@ -235,7 +235,7 @@ public class ScmManagerSource extends SCMSource {
     @Override
     protected boolean isCategoryEnabled(@NonNull SCMHeadCategory category) {
         return isCategoryTraitEnabled(category)
-                && SCMBuilderProvider.byType(getType()).isSupported(category);
+                && SCMBuilderProvider.byType(type).isSupported(category);
     }
 
     @VisibleForTesting
